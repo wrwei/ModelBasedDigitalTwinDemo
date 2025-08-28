@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="EmergencyRepairProcess" name="Emergency Road Repair Process" isExecutable="true">
+
+        <!-- Start Event -->
+        <startEvent id="StartEvent_1" name="Start Emergency Repair">
+            <documentation>Emergency repairs are high-priority and require immediate attention</documentation>
+        </startEvent>
+        <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="EmergencyAssessment"/>
+
+        <!-- ASYNC #1 -->
+        <serviceTask id="EmergencyAssessment" name="Emergency Assessment"
+                     flowable:delegateExpression="${emergencyAssessBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true">
+            <documentation>Rapid assessment of critical damage</documentation>
+        </serviceTask>
+        <sequenceFlow id="Flow_2" sourceRef="EmergencyAssessment" targetRef="ParallelGateway_1"/>
+
+        <!-- Parallel execution of multiple activities -->
+        <parallelGateway id="ParallelGateway_1" name="Parallel Activities"/>
+
+        <!-- ASYNC #2 -->
+        <serviceTask id="DispatchRepairTeam" name="Dispatch Emergency Repair Team"
+                     flowable:delegateExpression="${emergencyDispatchBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_3a" sourceRef="ParallelGateway_1" targetRef="DispatchRepairTeam"/>
+
+        <!-- ASYNC #3 -->
+        <serviceTask id="NotifyAuthorities" name="Notify Local Authorities"
+                     flowable:delegateExpression="${notifyAuthoritiesBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_3b" sourceRef="ParallelGateway_1" targetRef="NotifyAuthorities"/>
+
+        <!-- ASYNC #4 -->
+        <serviceTask id="SetupTrafficDiversion" name="Setup Traffic Diversion"
+                     flowable:delegateExpression="${trafficDiversionBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_3c" sourceRef="ParallelGateway_1" targetRef="SetupTrafficDiversion"/>
+
+        <parallelGateway id="ParallelGateway_2" name="Join Activities"/>
+        <sequenceFlow id="Flow_4a" sourceRef="DispatchRepairTeam" targetRef="ParallelGateway_2"/>
+        <sequenceFlow id="Flow_4b" sourceRef="NotifyAuthorities" targetRef="ParallelGateway_2"/>
+        <sequenceFlow id="Flow_4c" sourceRef="SetupTrafficDiversion" targetRef="ParallelGateway_2"/>
+
+        <sequenceFlow id="Flow_5" sourceRef="ParallelGateway_2" targetRef="MonitorEmergencyRepair"/>
+
+        <!-- ASYNC #5 -->
+        <serviceTask id="MonitorEmergencyRepair" name="Monitor Emergency Repair"
+                     flowable:delegateExpression="${monitorEmergencyBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_6" sourceRef="MonitorEmergencyRepair" targetRef="EmergencyDecision"/>
+
+        <exclusiveGateway id="EmergencyDecision" name="Emergency Repair Decision"/>
+
+        <sequenceFlow id="Flow_7" sourceRef="EmergencyDecision" targetRef="VerifyEmergencyRepair">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'completed'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_8" sourceRef="EmergencyDecision" targetRef="MonitorEmergencyRepair">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'in-progress'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_9" sourceRef="EmergencyDecision" targetRef="EscalateEmergency">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'delayed'}]]></conditionExpression>
+        </sequenceFlow>
+
+        <!-- ASYNC #6 -->
+        <serviceTask id="EscalateEmergency" name="Escalate Emergency Level"
+                     flowable:delegateExpression="${escalateEmergencyBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_10" sourceRef="EscalateEmergency" targetRef="HumanEmergencyIntervention"/>
+
+        <userTask id="HumanEmergencyIntervention" name="Manual Emergency Intervention">
+            <documentation>Critical situation requiring direct human oversight</documentation>
+        </userTask>
+        <sequenceFlow id="Flow_11" sourceRef="HumanEmergencyIntervention" targetRef="MonitorEmergencyRepair"/>
+
+        <!-- ASYNC #7 -->
+        <serviceTask id="VerifyEmergencyRepair" name="Verify Emergency Repair"
+                     flowable:delegateExpression="${verifyEmergencyBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_12" sourceRef="VerifyEmergencyRepair" targetRef="RestoreTraffic"/>
+
+        <!-- ASYNC #8 -->
+        <serviceTask id="RestoreTraffic" name="Restore Normal Traffic"
+                     flowable:delegateExpression="${restoreTrafficBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_13" sourceRef="RestoreTraffic" targetRef="CloseEmergencyRepair"/>
+
+        <!-- ASYNC #9 -->
+        <serviceTask id="CloseEmergencyRepair" name="Close Emergency Repair"
+                     flowable:delegateExpression="${closeEmergencyRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_14" sourceRef="CloseEmergencyRepair" targetRef="EndEvent_1"/>
+
+        <endEvent id="EndEvent_1" name="Emergency Repair Completed"/>
+
+    </process>
+
+</definitions>

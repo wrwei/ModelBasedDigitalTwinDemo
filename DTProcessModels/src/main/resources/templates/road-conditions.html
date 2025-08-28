@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Road Conditions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"
+      }
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d4d 100%);
+      padding: 2rem;
+      color: #ffffff;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .road-list-container {
+      padding: 0.75rem;
+    }
+
+    /* Header styles with continuous corners */
+    .header-row {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 100px;
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .header-cell {
+      display: flex;
+      justify-content: center;
+    }
+
+    .sort-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: rgba(255, 255, 255, 0.9);
+      padding: 0.75rem 1rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+
+    .sort-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .sort-button.active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .sort-icon {
+      opacity: 0;  /* Hide by default */
+      font-size: 0.625rem;
+      transition: all 0.2s ease;
+    }
+
+    .sort-button.active .sort-icon {
+      opacity: 0.7;  /* Only show for active button */
+    }
+
+    .sort-button.active:hover .sort-icon {
+      opacity: 1;
+    }
+
+    .sort-button.active.asc .sort-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Data row styles with continuous corners */
+    .data-row {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 0.75rem 1.5rem;
+      margin-bottom: 0.75rem;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1rem;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .data-row:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .data-cell {
+      padding: 0.75rem 0;
+      font-size: 0.9375rem;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+    }
+
+    /* Status pills with color-matched backgrounds */
+    .status-pill {
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      font-weight: 500;
+      font-size: 0.875rem;
+      display: inline-block;
+      text-align: center;
+      min-width: 100px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .status-normal {
+      color: #2ed573;
+      background: rgba(46, 213, 115, 0.15);
+    }
+
+    .status-low {
+      color: #37a6f1;
+      background: rgba(55, 166, 241, 0.15);
+    }
+
+    .status-medium {
+      color: #ffbb33;
+      background: rgba(255, 187, 51, 0.15);
+    }
+
+    .status-high {
+      color: #ff8c32;
+      background: rgba(255, 140, 50, 0.15);
+    }
+
+    .status-severe {
+      color: #ea5455;
+      background: rgba(234, 84, 85, 0.15);
+    }
+
+    .status-defect {
+      color: #d63384;
+      background: rgba(214, 51, 132, 0.15);
+    }
+
+    .metric-value {
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Modal styles */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+
+    .overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .expanded-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 90%;
+      max-width: 1000px;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 2rem;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+
+    .expanded-card.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .close-button {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .close-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .close-button::before,
+    .close-button::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 2px;
+      background: currentColor;
+      transform: rotate(45deg);
+    }
+
+    .close-button::after {
+      transform: rotate(-45deg);
+    }
+
+    .expanded-header {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1rem;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .expanded-details {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+
+    .detail-section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1.5rem;
+      border-radius: 16px;
+    }
+
+    .detail-section h3 {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .detail-section p {
+      margin-bottom: 0.75rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.9375rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .data-row {
+      animation: fadeIn 0.2s ease forwards;
+    }
+
+    .model-viewer {
+      flex: 1;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .info-panel {
+      padding: 1rem;
+    }
+
+    .info-header {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1rem;
+    }
+
+    .header-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .header-value {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    #modelCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .model-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.875rem;
+      text-align: center;
+    }
+
+    /* Ensure continuous corners everywhere */
+    .header-row,
+    .data-row,
+    .sort-button,
+    .status-pill,
+    .expanded-card,
+    .detail-section {
+      overflow: hidden;
+    }
+  </style>
+
+  <script>
+    // Plain script for sorting (keep this as is)
+    document.addEventListener('DOMContentLoaded', function() {
+      sortTable('condition');
+      document.querySelector('[data-column="condition"]').click();
+    });
+
+    function sortTable(column) {
+      const container = document.querySelector('.road-list-container');
+      const rows = Array.from(container.querySelectorAll('.data-row'));
+      const button = document.querySelector(`[data-column="${column}"]`);
+      if (window.currentSort && window.currentSort.column === column) {
+        window.currentSort.ascending = !window.currentSort.ascending;
+      } else {
+        window.currentSort = { column: column, ascending: true };
+      }
+      document.querySelectorAll('.sort-button').forEach(btn => {
+        btn.classList.remove('active', 'asc');
+      });
+      button.classList.add('active');
+      if (!window.currentSort.ascending) {
+        button.classList.add('asc');
+      }
+      rows.sort((a, b) => {
+        let aValue, bValue;
+        switch (column) {
+          case 'wear':
+          case 'traffic':
+          case 'span':
+          case 'bitumen':
+            aValue = parseFloat(a.children[getColumnIndex(column)].textContent);
+            bValue = parseFloat(b.children[getColumnIndex(column)].textContent);
+            break;
+          case 'condition':
+            const severityOrder = { 'Defect': 5, 'Severe': 4, 'High': 3, 'Medium': 2, 'Low': 1, 'Normal': 0 };
+            aValue = severityOrder[a.children[2].textContent.trim()];
+            bValue = severityOrder[b.children[2].textContent.trim()];
+            break;
+          default:
+            aValue = a.children[getColumnIndex(column)].textContent.trim();
+            bValue = b.children[getColumnIndex(column)].textContent.trim();
+        }
+        if (aValue < bValue) return window.currentSort.ascending ? -1 : 1;
+        if (aValue > bValue) return window.currentSort.ascending ? 1 : -1;
+        return 0;
+      });
+      rows.forEach(row => container.appendChild(row));
+    }
+
+    function getColumnIndex(column) {
+      const columnMap = {
+        'section': 0,
+        'wear': 1,
+        'condition': 2,
+        'traffic': 3,
+        'span': 4,
+        'bitumen': 5
+      };
+      return columnMap[column];
+    }
+    window.sortTable = sortTable;
+    window.getColumnIndex = getColumnIndex;
+  </script>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+    import { KTX2Loader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/KTX2Loader.js';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      let currentScene, currentCamera, currentRenderer, currentControls;
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      document.body.appendChild(overlay);
+      const expandedCard = document.createElement('div');
+      expandedCard.className = 'expanded-card';
+      document.body.appendChild(expandedCard);
+
+      function closeCard(e) {
+        e.stopPropagation();
+        overlay.classList.remove('active');
+        expandedCard.classList.remove('active');
+        if (currentRenderer) {
+          currentRenderer.dispose();
+          currentRenderer = null;
+        }
+        if (currentScene) {
+          while (currentScene.children.length > 0) {
+            currentScene.remove(currentScene.children[0]);
+          }
+        }
+      }
+
+      function createExpandedContent(row) {
+        const cells = Array.from(row.children);
+        const [section, wear, condition, traffic, span, bitumen] = cells.map(cell => cell.innerHTML);
+        return `
+      <button class="close-button"></button>
+      <div class="info-header">
+        <div>
+          <div class="header-label">Section</div>
+          <div class="header-value">${section}</div>
+        </div>
+        <div>
+          <div class="header-label">Wear Score</div>
+          <div class="header-value">${wear}</div>
+        </div>
+        <div>
+          <div class="header-label">Condition</div>
+          <div class="header-value">${condition}</div>
+        </div>
+        <div>
+          <div class="header-label">Traffic Load</div>
+          <div class="header-value">${traffic}</div>
+        </div>
+        <div>
+          <div class="header-label">Span</div>
+          <div class="header-value">${span}</div>
+        </div>
+        <div>
+          <div class="header-label">Bitumen Level</div>
+          <div class="header-value">${bitumen}</div>
+        </div>
+      </div>
+      <div class="model-viewer">
+        <canvas id="modelCanvas"></canvas>
+        <div class="model-loading">Loading 3D Model...</div>
+      </div>`;
+      }
+
+      function loadGLBModel(meshName, onLoad, onError) {
+        const xhr = new XMLHttpRequest();
+        xhr.responseType = 'arraybuffer';
+
+        xhr.onload = function() {
+          if (xhr.status === 200 || xhr.status === 0) {
+            try {
+              const loader = new GLTFLoader();
+
+              // Set up the KTX2Loader with the correct transcoder path...
+              const ktx2Loader = new KTX2Loader();
+              ktx2Loader.setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/basis/');
+
+              // IMPORTANT: Detect support with your renderer
+              // (Assuming 'currentRenderer' is available from your Three.js setup)
+              ktx2Loader.detectSupport(currentRenderer);
+
+              loader.setKTX2Loader(ktx2Loader);
+
+              loader.parse(
+                      xhr.response,
+                      '',
+                      function(gltf) {
+                        if (onLoad) onLoad(gltf);
+                      },
+                      function(error) {
+                        console.error('Error parsing GLB:', error);
+                        if (onError) onError(error);
+                      }
+              );
+            } catch (error) {
+              console.error('Error loading GLB:', error);
+              if (onError) onError(error);
+            }
+          } else {
+            if (onError) onError(new Error('HTTP Status: ' + xhr.status));
+          }
+        };
+
+        xhr.onerror = function(error) {
+          console.error('Error making request:', error);
+          if (onError) onError(error);
+        };
+
+        const url = `/proxy/mesh/Interchange1/${meshName}.glb`;
+        xhr.open('GET', url, true);
+        xhr.send(null);
+      }
+
+      function initThreeJS(meshName) {
+        try {
+          if (currentRenderer) {
+            currentRenderer.dispose();
+          }
+          const canvas = document.getElementById('modelCanvas');
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
+          currentScene = new THREE.Scene();
+          currentScene.background = new THREE.Color(0x2d2d4d);
+          currentCamera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+          currentCamera.position.set(5, 5, 5);
+          currentCamera.lookAt(0, 0, 0);
+          currentRenderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            alpha: true
+          });
+          currentRenderer.setSize(width, height);
+          currentRenderer.setPixelRatio(window.devicePixelRatio);
+          currentControls = new OrbitControls(currentCamera, currentRenderer.domElement);
+          currentControls.enableDamping = true;
+          currentControls.dampingFactor = 0.05;
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+          currentScene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          directionalLight.position.set(1, 1, 1);
+          currentScene.add(directionalLight);
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x666666,
+            metalness: 0.3,
+            roughness: 0.8
+          });
+          const cube = new THREE.Mesh(geometry, material);
+          currentScene.add(cube);
+          function animate() {
+            if (!currentRenderer) return;
+            requestAnimationFrame(animate);
+            cube.rotation.y += 0.01;
+            currentControls.update();
+            currentRenderer.render(currentScene, currentCamera);
+          }
+          animate();
+          loadGLBModel(
+                  meshName,
+                  function(gltf) {
+                    currentScene.remove(cube);
+                    currentScene.add(gltf.scene);
+                    const box = new THREE.Box3().setFromObject(gltf.scene);
+                    const size = box.getSize(new THREE.Vector3());
+                    gltf.scene.position.set(0, 0, 0);  // Move the model to the origin
+                    const scale = 5 / Math.max(size.x, size.y, size.z);
+                    gltf.scene.scale.multiplyScalar(scale);
+                    document.querySelector('.model-loading').style.display = 'none';
+                  },
+                  function(error) {
+                    console.error('Error loading GLB:', error);
+                    document.querySelector('.model-loading').textContent = 'Using placeholder model';
+                  }
+          );
+        } catch (error) {
+          console.error('Error initializing Three.js:', error);
+          document.querySelector('.model-loading').textContent = 'Error initializing 3D viewer';
+        }
+      }
+
+      document.querySelectorAll('.data-row').forEach(row => {
+        row.addEventListener('click', function() {
+          const cardContent = createExpandedContent(this);
+          expandedCard.innerHTML = cardContent;
+          overlay.classList.add('active');
+          expandedCard.classList.add('active');
+          const sectionName = this.children[0].textContent.trim();
+          setTimeout(() => {
+            initThreeJS(sectionName);
+          }, 100);
+          expandedCard.querySelector('.close-button').addEventListener('click', closeCard);
+        });
+      });
+      overlay.addEventListener('click', closeCard);
+      window.addEventListener('resize', () => {
+        if (currentCamera && currentRenderer) {
+          const canvas = document.getElementById('modelCanvas');
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
+          currentCamera.aspect = width / height;
+          currentCamera.updateProjectionMatrix();
+          currentRenderer.setSize(width, height);
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+<div class="container">
+  <div class="road-list-container">
+    <div class="header-row">
+      <div class="header-cell">
+        <button class="sort-button" data-column="section" onclick="sortTable('section')">
+          Road Section <span class="sort-icon">▼</span>
+        </button>
+      </div>
+      <div class="header-cell">
+        <button class="sort-button" data-column="wear" onclick="sortTable('wear')">
+          Wear Score <span class="sort-icon">▼</span>
+        </button>
+      </div>
+      <div class="header-cell">
+        <button class="sort-button active" data-column="condition" onclick="sortTable('condition')">
+          Condition <span class="sort-icon">▼</span>
+        </button>
+      </div>
+      <div class="header-cell">
+        <button class="sort-button" data-column="traffic" onclick="sortTable('traffic')">
+          Traffic Load <span class="sort-icon">▼</span>
+        </button>
+      </div>
+      <div class="header-cell">
+        <button class="sort-button" data-column="span" onclick="sortTable('span')">
+          Span <span class="sort-icon">▼</span>
+        </button>
+      </div>
+      <div class="header-cell">
+        <button class="sort-button" data-column="bitumen" onclick="sortTable('bitumen')">
+          Bitumen Level <span class="sort-icon">▼</span>
+        </button>
+      </div>
+    </div>
+
+    <div th:each="road : ${roads}" class="data-row">
+      <div class="data-cell" th:text="${road.pavementId}"></div>
+      <div class="data-cell metric-value" th:text="${#numbers.formatDecimal(road.wearScore * 100, 1, 1) + '%'}"></div>
+      <div class="data-cell">
+                    <span th:text="${#strings.capitalize(road.rank)}"
+                          th:class="${'status-pill status-' + road.rank}"></span>
+      </div>
+      <div class="data-cell metric-value" th:text="${#numbers.formatDecimal(road.trafficLoad, 1, 0) + ' cars/hour'}"></div>
+      <div class="data-cell metric-value" th:text="${#numbers.formatDecimal(road.spanFactor, 1, 1) + ' m'}"></div>
+      <div class="data-cell metric-value" th:text="${#numbers.formatDecimal(road.bitumenLevel, 1, 1) + '%'}"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

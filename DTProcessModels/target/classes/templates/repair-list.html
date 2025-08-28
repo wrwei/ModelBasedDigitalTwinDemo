@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Repair List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d4d 100%);
+            padding: 2rem;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .repair-list-container {
+            padding: 0.75rem;
+        }
+        .header-row {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 100px;
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .header-cell {
+            display: flex;
+            justify-content: center;
+        }
+        .sort-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.75rem 1rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+        .sort-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .data-row {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 0.75rem 1.5rem;
+            margin-bottom: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .data-row:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        .data-cell {
+            padding: 0.75rem 0;
+            font-size: 0.9375rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+        }
+
+        .status-pill {
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: inline-block;
+            text-align: center;
+            min-width: 100px;
+            backdrop-filter: blur(10px);
+        }
+        .status-identified {
+            color: #37a6f1;
+            background: rgba(55, 166, 241, 0.15);
+        }
+        .status-inprogress {
+            color: #ffbb33;
+            background: rgba(255, 187, 51, 0.15);
+        }
+        .status-delayed {
+            color: #ff8c32;
+            background: rgba(255, 140, 50, 0.15);
+        }
+        .status-completed {
+            color: #2ed573;
+            background: rgba(46, 213, 115, 0.15);
+        }
+        .status-unknown {
+            color: #ffffff;
+            background: rgba(255,255,255,0.1);
+        }
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+        .overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .expanded-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 90%;
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 2rem;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .expanded-card.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .close-button {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .close-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        .close-button::before,
+        .close-button::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 2px;
+            background: currentColor;
+            transform: rotate(45deg);
+        }
+        .close-button::after {
+            transform: rotate(-45deg);
+        }
+        .detail-section {
+            margin-bottom: 1rem;
+        }
+        .log-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .log-box {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #fff;
+        }
+
+        .action-buttons {
+            margin-top: 1rem;
+        }
+        .action-buttons button {
+            margin-right: 1rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            cursor: pointer;
+        }
+        .action-buttons button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .action-buttons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        #human-intervention-tasks {
+            display: none;
+        }
+
+        .human-intervention-banner {
+            background: rgba(255, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #ff6b6b;
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+        }
+
+        .task-item {
+            background: rgba(199, 57, 57, 0.4);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-select-task {
+            background: rgba(255, 80, 80, 0.3);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-select-task:hover {
+            background: rgba(255, 80, 80, 0.5);
+            transform: scale(1.05);
+        }
+
+        #complete-task-form-container {
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        #complete-task-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        #complete-task-form input,
+        #complete-task-form select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+        }
+
+        #complete-task-form button {
+            background: rgba(255, 80, 80, 0.4);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        #complete-task-form button:hover {
+            background: rgba(255, 80, 80, 0.6);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="repair-list-container">
+        <div class="header-row">
+            <div class="header-cell">
+                <button class="sort-button" disabled>Repair ID</button>
+            </div>
+            <div class="header-cell">
+                <button class="sort-button" disabled>Road Section</button>
+            </div>
+            <div class="header-cell">
+                <button class="sort-button" disabled>Condition</button>
+            </div>
+            <div class="header-cell">
+                <button class="sort-button" disabled>Status</button>
+            </div>
+        </div>
+
+        <div id="repairs-container"></div>
+    </div>
+</div>
+
+<div class="overlay"></div>
+<div class="expanded-card"></div>
+
+<script>
+    let latestRepairs = [];
+    let currentRepairId = null;
+    let logsInterval = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableBody = document.getElementById('repairs-container');
+        const overlay = document.querySelector('.overlay');
+        const expandedCard = document.querySelector('.expanded-card');
+
+        const REFRESH_INTERVAL_MS = 5000;
+
+        // Load repairs from /process/repairs-list
+        function fetchRepairsAndRender() {
+            fetch('/process/repairs-list')
+                .then(resp => resp.json())
+                .then(repairs => {
+                    latestRepairs = repairs;
+                    tableBody.innerHTML = ''; // clear old rows
+
+                    repairs.forEach((repair, idx) => {
+                        const rowDiv = document.createElement('div');
+                        rowDiv.className = 'data-row';
+                        rowDiv.addEventListener('click', () => showExpandedCard(idx));
+
+                        // Column A: Repair ID
+                        const cellId = document.createElement('div');
+                        cellId.className = 'data-cell';
+                        cellId.textContent = repair.repairId;
+                        rowDiv.appendChild(cellId);
+
+                        // Column B: Road Section
+                        const cellSurface = document.createElement('div');
+                        cellSurface.className = 'data-cell';
+                        cellSurface.textContent = repair.surface;
+                        rowDiv.appendChild(cellSurface);
+
+                        // Column C: Condition
+                        const cellCondition = document.createElement('div');
+                        cellCondition.className = 'data-cell';
+                        cellCondition.textContent = repair.defectType;
+                        rowDiv.appendChild(cellCondition);
+
+                        // Column D: Status Pill
+                        const cellStatus = document.createElement('div');
+                        cellStatus.className = 'data-cell';
+                        const pill = document.createElement('span');
+                        pill.classList.add('status-pill');
+
+                        const normStatus = (repair.status || '').toLowerCase().replace(/\s/g, '');
+                        if (normStatus.includes('identified')) {
+                            pill.classList.add('status-identified');
+                        } else if (normStatus.includes('progress')) {
+                            pill.classList.add('status-inprogress');
+                        } else if (normStatus.includes('delayed')) {
+                            pill.classList.add('status-delayed');
+                        } else if (normStatus.includes('completed')) {
+                            pill.classList.add('status-completed');
+                        } else {
+                            pill.classList.add('status-unknown');
+                        }
+                        pill.textContent = repair.status;
+                        cellStatus.appendChild(pill);
+                        rowDiv.appendChild(cellStatus);
+
+                        tableBody.appendChild(rowDiv);
+                    });
+                })
+                .catch(err => console.error('Error fetching repairs:', err));
+        }
+
+        // Show an expanded card
+        function showExpandedCard(index) {
+            const repair = latestRepairs[index];
+            if (!repair) return;
+            currentRepairId = repair.repairId;
+
+            // Fetch BPMN details from /workflow/details/{repairId}
+            fetch('/workflow/details/' + repair.repairId)
+                .then(resp => resp.json())
+                .then(workflow => {
+                    // Build the HTML structure with dedicated containers for repair info, BPMN details, and buttons
+                    expandedCard.innerHTML = `
+      <button class="close-button"></button>
+      <h2>Repair Details for ${repair.repairId}</h2>
+      <div class="detail-section" id="repair-info">
+         <p><strong>Road Section:</strong> ${repair.surface}</p>
+         <p><strong>Condition:</strong> ${repair.defectType}</p>
+         <p><strong>Status:</strong> ${repair.status}</p>
+      </div>
+      <div class="detail-section" id="bpmn-details"></div>
+      <div class="detail-section">
+          <div class="log-title">Task Log (Human)</div>
+          <div class="log-box" id="human-log-container"></div>
+          <div class="log-title">Robot Log</div>
+          <div class="log-box" id="robot-log-container"></div>
+      </div>
+
+      <div class="detail-section" id="human-intervention-tasks">
+          <h3>Human Intevention Tasks</h3>
+          <div class="task-list-container" id="task-list"></div>
+          <div id="complete-task-form-container" style="display:none;">
+              <h4>Complete Task</h4>
+              <form id="complete-task-form">
+                  <div>
+                      <label for="task-id">Task ID:</label>
+                      <input type="text" id="task-id" name="task-id" readonly>
+                  </div>
+                  <div>
+                      <label for="task-name">Task Name:</label>
+                      <input type="text" id="task-name" name="task-name" readonly>
+                  </div>
+                  <div>
+                      <label for="task-status">Status:</label>
+                      <select id="task-status" name="task-status">
+                          <option value="completed">Completed</option>
+                          <option value="in progress">In Progress</option>
+                          <option value="delayed">Delayed</option>
+                      </select>
+                  </div>
+                  <button type="submit">Complete Task</button>
+              </form>
+          </div>
+      </div>
+
+      <div class="action-buttons" id="workflow-buttons"></div>
+    `;
+
+                    document.getElementById('complete-task-form').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const taskId = document.getElementById('task-id').value;
+                        const taskStatus = document.getElementById('task-status').value;
+
+                        fetch(`/workflow/complete-task?taskId=${taskId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                variables: {
+                                    status: taskStatus
+                                }
+                            })
+                        })
+                            .then(resp => resp.json())
+                            .then(data => {
+                                alert(data.result || data.error || 'Task updated');
+                                document.getElementById('complete-task-form-container').style.display = 'none';
+                                fetchWorkflowTasks(window.currentProcessInstanceId);
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                alert('Error completing task');
+                            });
+                    });
+
+
+                    // Update BPMN details container based on workflow data
+                    const bpmnContainer = document.getElementById('bpmn-details');
+                    if (workflow.status && workflow.status === 'Not found') {
+                        bpmnContainer.innerHTML = `<p><strong>BPMN Workflow:</strong> No active workflow found.</p>`;
+                    } else {
+                        bpmnContainer.innerHTML = `
+        <p><strong>BPMN Workflow Type:</strong> ${workflow.workflowType || 'Unknown'}</p>
+        <p><strong>Process Instance ID:</strong> ${workflow.processInstanceId || 'N/A'}</p>
+        <p><strong>Is Active?</strong> ${workflow.isActive ? 'Yes' : 'No'}</p>
+        ${workflow.currentTask ? `<p><strong>Current BPMN Step:</strong> ${workflow.currentTask}</p>` : ''}
+    `;
+                    }
+                    if (workflow && workflow.processInstanceId) {
+                        window.currentProcessInstanceId = workflow.processInstanceId;
+                        fetchWorkflowTasks(workflow.processInstanceId);
+                    }
+
+                    // Determine if workflow is in progress
+                    const workflowInProgress = workflow && workflow.isActive;
+
+                    // Render action buttons. When workflow is active disable them.
+                    const buttonsHTML = `
+      <button ${workflowInProgress ? 'disabled' : ''} onclick="startWorkflow('${repair.repairId}','STANDARD')">Start Standard</button>
+      <button ${workflowInProgress ? 'disabled' : ''} onclick="startWorkflow('${repair.repairId}','EXPRESS')">Start Express</button>
+      <button ${workflowInProgress ? 'disabled' : ''} onclick="startWorkflow('${repair.repairId}','EMERGENCY')">Start Emergency</button>
+    `;
+                    document.getElementById('workflow-buttons').innerHTML = buttonsHTML;
+
+                    // Set up close button
+                    expandedCard.querySelector('.close-button').addEventListener('click', closeCard);
+
+                    overlay.classList.add('active');
+                    expandedCard.classList.add('active');
+
+                    // Start polling
+                    fetchAndRenderLogs();
+                    logsInterval = setInterval(fetchAndRenderLogs, 3000);
+                })
+                .catch(err => {
+                    console.error('Error fetching BPMN details:', err);
+                    expandedCard.innerHTML = `
+      <button class="close-button"></button>
+      <h2>Repair Details for ${repair.repairId}</h2>
+      <p>Error fetching workflow details.</p>
+    `;
+                    expandedCard.querySelector('.close-button').addEventListener('click', closeCard);
+                    overlay.classList.add('active');
+                    expandedCard.classList.add('active');
+                });
+        }
+
+        // 2b) Poll logs from /process/logs?repairId=X
+        function fetchAndRenderLogs() {
+            if (!currentRepairId) return;
+            fetch(`/process/logs?repairId=${currentRepairId}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    const humanDiv = document.getElementById('human-log-container');
+                    const robotDiv = document.getElementById('robot-log-container');
+                    if (!humanDiv || !robotDiv) return;
+
+                    const humanLog = data.humanLog || [];
+                    const robotLog = data.robotLog || [];
+
+                    humanDiv.innerHTML = humanLog
+                        .map(e => `[${e.timestamp}] ${e.message}`)
+                        .join('<br/>');
+                    robotDiv.innerHTML = robotLog
+                        .map(e => `[${e.timestamp}] ${e.message}`)
+                        .join('<br/>');
+                })
+                .catch(err => console.error('Error fetching logs:', err));
+        }
+
+
+        // Close the expanded card
+        function closeCard() {
+            overlay.classList.remove('active');
+            expandedCard.classList.remove('active');
+            currentRepairId = null;
+
+            // Stop polling logs
+            if (logsInterval) {
+                clearInterval(logsInterval);
+                logsInterval = null;
+            }
+        }
+
+        // Start BPMN workflow
+        window.startWorkflow = function(repairId, type) {
+            fetch(`/workflow/start/${type}?repairId=${repairId}`, { method: 'POST' })
+                .then(resp => resp.json())
+                .then(data => {
+                    alert(data.result || data.error || 'Unexpected response');
+                    setTimeout(refreshBPMNDetails, 1000);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error starting workflow');
+                });
+        };
+
+        function renderHumanInterventionTasks(tasks) {
+            const humanInterventionSection = document.getElementById('human-intervention-tasks');
+            const taskListDiv = document.getElementById('task-list');
+
+            // Show the human intervention section if there are tasks
+            if (tasks.length === 0) {
+                humanInterventionSection.style.display = 'none';
+                return;
+            }
+
+            // Show the section if there are tasks
+            humanInterventionSection.style.display = 'block';
+
+            // Generate the task list
+            let tasksHtml = '';
+            tasks.forEach(task => {
+                const createDate = new Date(task.createTime).toLocaleString();
+                tasksHtml += `
+                <div class="task-item">
+                    <div>
+                        <strong>${task.name}</strong><br>
+                        <small>Created: ${createDate}</small>
+                    </div>
+                    <button class="btn-select-task" data-task-id="${task.id}" data-task-name="${task.name}">
+                        Complete Task
+                    </button>
+                </div>`;
+            });
+
+            taskListDiv.innerHTML = tasksHtml;
+
+            // Add event listeners to the "Complete Task" buttons
+            document.querySelectorAll('.btn-select-task').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const taskName = this.getAttribute('data-task-name');
+                    document.getElementById('task-id').value = taskId;
+                    document.getElementById('task-name').value = taskName;
+                    document.getElementById('complete-task-form-container').style.display = 'block';
+                });
+            });
+        }
+
+        function fetchWorkflowTasks(processInstanceId) {
+            if (!processInstanceId) return;
+
+            fetch(`/workflow/tasks/${processInstanceId}`)
+                .then(response => response.json())
+                .then(tasks => {
+                    renderHumanInterventionTasks(tasks);
+                })
+                .catch(error => {
+                    console.error('Error fetching tasks:', error);
+                    const humanInterventionSection = document.getElementById('human-intervention-tasks');
+                    humanInterventionSection.style.display = 'none';
+                });
+        }
+
+        function refreshBPMNDetails() {
+            if (!currentRepairId) return;
+            fetch('/workflow/details/' + currentRepairId)
+                .then(resp => resp.json())
+                .then(workflow => {
+                    const detailsSection = document.querySelector('.expanded-card #bpmn-details');
+                    let newContent = '';
+                    if (workflow.status && workflow.status === 'Not found') {
+                        newContent += `
+                    <p><strong>BPMN Workflow:</strong> No active workflow found.</p>
+                `;
+                    } else {
+                        newContent += `
+                    <p><strong>BPMN Workflow Type:</strong> ${workflow.workflowType || 'Unknown'}</p>
+                    <p><strong>Process Instance ID:</strong> ${workflow.processInstanceId || 'N/A'}</p>
+                    <p><strong>Is Active?</strong> ${workflow.isActive ? 'Yes' : 'No'}</p>
+                `;
+                        if (workflow.currentTask) {
+                            newContent += `
+                        <p><strong>Current BPMN Step:</strong> ${workflow.currentTask}</p>
+                    `;
+                        }
+                    }
+                    detailsSection.innerHTML = newContent;
+
+                    if (workflow && workflow.processInstanceId) {
+                        // Store the process instance id globally if needed
+                        window.currentProcessInstanceId = workflow.processInstanceId;
+                        fetchWorkflowTasks(workflow.processInstanceId);
+                    } else {
+                        // Hide human intervention section
+                        document.getElementById('human-intervention-tasks').style.display = 'none';
+                    }
+                })
+                .catch(err => console.error('Error refreshing BPMN details:', err));
+        }
+
+        fetchRepairsAndRender();
+        setInterval(fetchRepairsAndRender, REFRESH_INTERVAL_MS);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeCard();
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="ExpressRepairProcess" name="Express Road Repair Process" isExecutable="true">
+
+        <!-- Start Event -->
+        <startEvent id="StartEvent_1" name="Start Express Repair">
+            <documentation>Express repairs are for minor defects requiring quick attention</documentation>
+        </startEvent>
+        <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QuickAssessment"/>
+
+        <!-- ASYNC #1 -->
+        <serviceTask id="QuickAssessment" name="Quick Defect Assessment"
+                     flowable:delegateExpression="${quickAssessBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true">
+            <documentation>Fast assessment of defect severity</documentation>
+        </serviceTask>
+        <sequenceFlow id="Flow_2" sourceRef="QuickAssessment" targetRef="ExpressDispatch"/>
+
+        <!-- ASYNC #2 -->
+        <serviceTask id="ExpressDispatch" name="Express Robot Dispatch"
+                     flowable:delegateExpression="${expressDispatchBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true">
+            <documentation>Dispatches smaller, faster repair units</documentation>
+        </serviceTask>
+        <sequenceFlow id="Flow_3" sourceRef="ExpressDispatch" targetRef="TrackRepair"/>
+
+        <!-- ASYNC #3 -->
+        <serviceTask id="TrackRepair" name="Track Express Repair"
+                     flowable:delegateExpression="${trackRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_4" sourceRef="TrackRepair" targetRef="RepairDecision"/>
+
+        <exclusiveGateway id="RepairDecision" name="Repair Status Decision"/>
+
+        <sequenceFlow id="Flow_5" sourceRef="RepairDecision" targetRef="ConfirmCompletion">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'completed'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_6" sourceRef="RepairDecision" targetRef="TrackRepair">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'in-progress'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_7" sourceRef="RepairDecision" targetRef="EscalateRepair">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'delayed'}]]></conditionExpression>
+        </sequenceFlow>
+
+        <!-- ASYNC #4 -->
+        <serviceTask id="EscalateRepair" name="Escalate to Standard Repair"
+                     flowable:delegateExpression="${escalateRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true">
+            <documentation>Converts express repair to standard if complexity is higher than expected</documentation>
+        </serviceTask>
+        <sequenceFlow id="Flow_8" sourceRef="EscalateRepair" targetRef="EndEvent_Escalated"/>
+        <endEvent id="EndEvent_Escalated" name="Escalated to Standard Process"/>
+
+        <!-- ASYNC #5 -->
+        <serviceTask id="ConfirmCompletion" name="Confirm Repair Completion"
+                     flowable:delegateExpression="${confirmCompletionBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_9" sourceRef="ConfirmCompletion" targetRef="EndEvent_1"/>
+
+        <endEvent id="EndEvent_1" name="Express Repair Completed"/>
+
+    </process>
+
+</definitions>

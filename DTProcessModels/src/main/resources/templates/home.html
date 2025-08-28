@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Home - Digital Twin Process Model</title>
+    <style>
+        .nav-links {
+            margin-top: 20px;
+        }
+        .nav-links a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .nav-links a:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+<h1 th:text="${message}"></h1>
+
+<div class="nav-links">
+    <a href="/portal/road-conditions">View Road Conditions</a>
+</div>
+<div class="nav-links">
+    <a href="/portal/repair-list">View Road Repairs</a>
+</div>
+</body>
+</html>

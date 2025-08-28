@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="StandardRepairProcess" name="Standard Road Repair Process" isExecutable="true">
+
+        <!-- Start Event -->
+        <startEvent id="StartEvent_1" name="Start Repair Process"/>
+        <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AssessRepair"/>
+
+        <!-- ASYNC #1 -->
+        <serviceTask id="AssessRepair" name="Assess Repair Needs"
+                     flowable:delegateExpression="${assessRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_2" sourceRef="AssessRepair" targetRef="DispatchRobot"/>
+
+        <!-- ASYNC #2 -->
+        <serviceTask id="DispatchRobot" name="Dispatch Repair Robot"
+                     flowable:delegateExpression="${dispatchRobotBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_3" sourceRef="DispatchRobot" targetRef="MonitorProgress"/>
+
+        <!-- ASYNC #3 -->
+        <serviceTask id="MonitorProgress" name="Monitor Repair Progress"
+                     flowable:delegateExpression="${monitorProgressBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_4" sourceRef="MonitorProgress" targetRef="CheckCompletion"/>
+
+        <exclusiveGateway id="CheckCompletion" name="Check Completion"/>
+
+        <sequenceFlow id="Flow_5" sourceRef="CheckCompletion" targetRef="VerifyRepair">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'completed'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_6" sourceRef="CheckCompletion" targetRef="MonitorProgress">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'in-progress'}]]></conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="Flow_7" sourceRef="CheckCompletion" targetRef="HumanIntervention">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[${status == 'delayed'}]]></conditionExpression>
+        </sequenceFlow>
+
+        <userTask id="HumanIntervention" name="Human Intervention Required"/>
+        <sequenceFlow id="Flow_8" sourceRef="HumanIntervention" targetRef="MonitorProgress"/>
+
+        <!-- ASYNC #4 -->
+        <serviceTask id="VerifyRepair" name="Verify Repair Quality"
+                     flowable:delegateExpression="${verifyRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_9" sourceRef="VerifyRepair" targetRef="CloseRepair"/>
+
+        <!-- ASYNC #5 -->
+        <serviceTask id="CloseRepair" name="Close Repair Task"
+                     flowable:delegateExpression="${closeRepairBean}"
+                     flowable:async="true"
+                     flowable:exclusive="true" />
+        <sequenceFlow id="Flow_10" sourceRef="CloseRepair" targetRef="EndEvent_1"/>
+
+        <endEvent id="EndEvent_1" name="Repair Process Completed"/>
+
+    </process>
+
+</definitions>
