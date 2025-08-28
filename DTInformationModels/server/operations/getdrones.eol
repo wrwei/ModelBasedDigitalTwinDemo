@@ -1,0 +1,7 @@
+Output.root.names = new Sequence;
+Output.root.positions = new Sequence;
+
+for (d in Model!Drone.all) {
+    Output.root.names.add(d.name);
+    Output.root.positions.add(d.position);
+}

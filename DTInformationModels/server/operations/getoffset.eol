@@ -1,0 +1,8 @@
+var matchModels = Model!Mesh.all.select(t|t.file = Input.root.modelName);
+
+if (matchModels.size != 1)
+    throw "[User Error] Cannot find " + Input.root.modelName;
+
+var target = matchModels.get(0);
+
+Output.root.offset = Sequence { target.offset[0], target.offset[1], target.offset[2] };

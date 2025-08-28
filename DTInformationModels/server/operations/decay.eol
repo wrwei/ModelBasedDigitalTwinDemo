@@ -1,0 +1,16 @@
+for (s in Model!Surface.all) {
+    var totalQuantity = 0d;
+    for (m in s.topMaterial) {
+        totalQuantity += m.quantity;
+    }
+
+    var carCount = s.carsPerHour * s.lanes * Input.root.simulationHours;
+    var totalDecayQuantity = Input.root.totalDecayQuantityPerCarPerArea * carCount * s.span;
+
+    for (m in s.topMaterial) {
+        m.quantity -= totalDecayQuantity * (m.quantity / totalQuantity);
+        if (m.quantity < 0d) {
+            m.quantity = 0d;
+        }
+    }
+}

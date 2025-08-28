@@ -1,0 +1,13 @@
+var matchRepresentations = Model!Representation.all.select(r|r.name = Input.root.itemName);
+
+if (matchRepresentations.size != 1) {
+    throw "[User Error] Cannot find " + Input.root.itemName;
+}
+
+var representation = matchRepresentations.random();
+
+if (not representation.hasProperty("lanes")) {
+    throw "[User Error] Representation does not have field lanes";
+}
+
+representation.lanes = Input.root.lanes;

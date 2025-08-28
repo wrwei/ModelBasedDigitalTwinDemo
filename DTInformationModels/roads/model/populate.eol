@@ -1,0 +1,209 @@
+"hi".println();
+delete Interchange.allInstances;
+
+var assetTypes = Map {
+	'Barrier' = Interchange!AssetType#Barrier,
+	'Curb' = Interchange!AssetType#Barrier,
+	'Deck' = Interchange!AssetType#Deck,
+	'Fence_Chain' = Interchange!AssetType#FenceChain,
+	'Fence' = Interchange!AssetType#FenceSolid,
+	'Fill' = Interchange!AssetType#Fill,
+	'Grass' = Interchange!AssetType#Grass,
+	'Lamp' = Interchange!AssetType#Lamp,
+	'Median' = Interchange!AssetType#Median,
+	'Sidewalk' = Interchange!AssetType#Sidewalk,
+	'Support' = Interchange!AssetType#Support,
+	'Pillar' = Interchange!AssetType#Pillar,
+	'Retainer' = Interchange!AssetType#Retainer,
+	'Wall' = Interchange!AssetType#Wall,
+	'Pipe' = Interchange!AssetType#Pipe
+};
+
+var surfaceTypes = Map {
+	'Pavement' = Interchange!SurfaceType#Pavement
+};
+
+var lineTypes = Map {
+	'Line_Dashed' = Interchange!LineType#Dashed,
+	'Line_Solid' = Interchange!LineType#Solid
+};
+
+var lineColors = Map {
+	'White' = Interchange!LineColor#White,
+	'Yellow' = Interchange!LineColor#Yellow
+};
+
+var markTypes = Map {
+	'Mark_Chevron' = Interchange!MarkType#Chevron,
+	'Mark_Crossing' = Interchange!MarkType#Crossing,
+	'Mark_Cross' = Interchange!MarkType#Cross,
+	'Mark_Cyclist' = Interchange!MarkType#Cyclist,
+	'Mark_Diagonal' = Interchange!MarkType#Diagonal,
+	'Mark_Perpendicular' = Interchange!MarkType#Perpendicular
+};
+
+var queuedSections = new Map(String, List);
+
+for (entry in Source.root.entries) {
+
+	var m = new Interchange!Mesh;
+	m.offset = entry.location;
+	m.file = entry.name;
+	
+	var area = new Interchange!Area;
+	area.aabbMin = entry.aabbMin;
+	area.aabbMax = entry.aabbMax;
+	
+	if (entry.untracked) {
+		continue;
+	}
+
+	
+	for (belong in entry.belongs) {
+		if (not queuedSections.containsKey(belong))
+			queuedSections.put(belong, new List);
+	}
+	
+
+	var found = false;
+	// Assets
+	for (key in assetTypes.keySet()) {
+		if (entry.name.startsWith(key)) {
+			var a = new Interchange!Asset;
+			a.name = entry.name;
+			a.subtype = assetTypes.get(key);
+			a.mesh = m;
+			a.area = area;
+			found = true;
+
+			for (belong in entry.belongs) {
+				queuedSections.get(belong).add(a);
+			}
+			break;
+		}
+	}
+	if (found) {
+		continue;
+	}
+	
+	// Surface
+	for (key in surfaceTypes.keySet()) {
+		if (entry.name.startsWith(key)) {
+			var s = new Interchange!Surface;
+			s.name = entry.name;
+			s.subtype = surfaceTypes.get(key);
+			s.mesh = m;
+			s.area = area;
+			s.lanes = 1d;
+			s.carsPerHour = 200d;
+			s.span = entry.surface;
+			
+			var tm1 = new Interchange!Material;
+			tm1.type = Interchange!MaterialType#Bitumen;
+			tm1.quantity = s.span * 0.15d * 0.06d;
+			s.topMaterial.add(tm1);
+			
+			var tm2 = new Interchange!Material;
+			tm2.type = Interchange!MaterialType#FineAggregates;
+			tm2.quantity = s.span * 0.15d * 0.94d;
+			s.topMaterial.add(tm2);
+			
+			var mm1 = new Interchange!Material;
+			mm1.type = Interchange!MaterialType#PortlandCement;
+			mm1.quantity = s.span * 0.2d * 0.04d;
+			s.midMaterial.add(mm1);
+			
+			var mm2 = new Interchange!Material;
+			mm2.type = Interchange!MaterialType#CoarseAggregates;
+			mm2.quantity = s.span * 0.2d * 0.41d;
+			s.midMaterial.add(mm2);
+			
+			var mm3 = new Interchange!Material;
+			mm3.type = Interchange!MaterialType#FineAggregates;
+			mm3.quantity = s.span * 0.2d * 0.55d;
+			s.midMaterial.add(mm3);
+			
+			s.defaultMaterial = new Interchange!Material;
+			
+			found = true;
+
+			for (belong in entry.belongs) {
+				queuedSections.get(belong).add(s);
+			}
+			break;
+		}
+	}
+	if (found) {
+		continue;
+	}
+
+	// Lines
+	for (key in lineTypes.keySet()) {
+		if (entry.name.startsWith(key)) {
+		
+			var options = entry.name.split('\\.')[0].split('_');
+			
+			var l = new Interchange!Line;
+			l.name = entry.name;
+			l.subtype = lineTypes.get(key);
+			
+			var error = true;
+			for (key in lineColors.keySet()) {
+				if (options[2].matches(key)) {
+					l.color = lineColors.get(key);
+					error = false;
+					break;
+				}
+			}
+			if (error) {
+				entry.name.println();
+			}
+			
+			l.area = area;
+			l.mesh = m;
+			found = true;
+
+			for (belong in entry.belongs) {
+				queuedSections.get(belong).add(l);
+			}
+			break;
+		}
+	}
+	if (found) {
+		continue;
+	}
+	
+	// Mark
+	for (key in markTypes.keySet()) {
+		if (entry.name.startsWith(key)) {
+		
+			var options = entry.name.split('\\.')[0].split('_');
+			
+			var r = new Interchange!Mark;
+			r.name = entry.name;
+			r.subtype = markTypes.get(key);
+			
+			r.area = area;
+			r.mesh = m;
+			found = true;
+
+			for (belong in entry.belongs) {
+				queuedSections.get(belong).add(r);
+			}
+			break;
+		}
+	}
+	if (found) {
+		continue;
+	}
+
+	entry.name.println();
+}
+
+for (section in queuedSections.keySet()) {
+	var s = new Interchange!Section;
+	s.name = section;
+	s.representations.addAll(queuedSections.get(section));
+}
+
+"done".println();

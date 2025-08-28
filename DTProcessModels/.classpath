@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="src/test/java"/>
+	<classpathentry kind="lib" path="__MACOSX/out/artifacts/dt_process_model_jar/._dt-process-model.jar"/>
+	<classpathentry kind="lib" path="out/artifacts/dt_process_model_jar/dt-process-model.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
