@@ -1,0 +1,7 @@
+if (Model!Drone.all.exists(d|d.name = Input.root.droneName)) {
+    throw "[User Error] Drone with name " + Input.root.droneName + " already exist";
+}
+
+var drone = new Model!Drone;
+drone.name = Input.root.droneName;
+drone.position = Input.root.position;

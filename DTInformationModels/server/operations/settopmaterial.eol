@@ -1,0 +1,41 @@
+var matchRepresentations = Model!Representation.all.select(r|r.name = Input.root.itemName);
+
+if (matchRepresentations.size != 1) {
+    throw "[User Error] Cannot find " + Input.root.itemName;
+}
+
+var representation = matchRepresentations.random();
+
+if (not representation.hasProperty("topMaterial")) {
+    throw "[User Error] Representation does not have field topMaterial";
+}
+
+var newTopInstances = Sequence {};
+
+if (Input.root.materialNames.size() > 0) {
+    for (i in Sequence{0..(Input.root.materialNames.size()-1)}) {
+        var materialName = Input.root.materialNames.at(i);
+        var materialQuantity = Input.root.materialQuantities.at(i);
+
+        var m = new Model!Material;
+
+        var matchMaterials = m.type.eEnum.eLiterals.select(l|l.getLiteral() = materialName);
+        if (matchMaterials.size != 1) {
+            throw "[User Error] Cannot find " + Input.root.materialName;
+        }
+
+        m.type = matchMaterials.random();
+        m.quantity = materialQuantity;
+
+        newTopInstances.add(m);
+    }
+}
+
+var oldTopInstances = Sequence {};
+oldTopInstances.addAll(representation.topMaterial);
+representation.topMaterial = Sequence {};
+for (material in oldTopInstances)
+    delete material;
+
+
+representation.topMaterial.addAll(newTopInstances);
