@@ -1,9 +1,0 @@
-var matchDrones = Model!Drone.all.select(d|d.name = Input.root.droneName);
-
-if (matchDrones.size != 1) {
-    throw "[User Error] Cannot find drone with name " + Input.root.droneName;
-}
-
-var drone = matchDrones.random();
-
-Output.root.position = drone.position;
